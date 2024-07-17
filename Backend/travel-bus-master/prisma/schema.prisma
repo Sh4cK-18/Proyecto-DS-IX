@@ -1,0 +1,105 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("MYSQL_URL")
+}
+
+model Usuario {
+  usuarioId   Int        @id @default(autoincrement())
+  nombre      String
+  apellido    String
+  email       String     @unique
+  password    String
+  profilePicture String?  @db.LongText
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  roles       UserRol[]
+  compras     Compra[]
+}
+
+model Rol {
+  rolId       Int        @id @default(autoincrement())
+  name        String     @unique
+  description String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  usuarios    UserRol[]
+}
+
+model UserRol {
+  userRolId   Int        @id @default(autoincrement())
+  userId      Int
+  roleId      Int
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  usuario     Usuario    @relation(fields: [userId], references: [usuarioId], onDelete: Cascade, onUpdate: Cascade)
+  rol         Rol        @relation(fields: [roleId], references: [rolId], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([userId, roleId])
+}
+
+model Ruta {
+  rutaId             Int        @id @default(autoincrement())
+  salida             String
+  llegada            String
+  fecha_hora         DateTime
+  puerta             String
+  precio_adulto      Decimal    @db.Decimal(10, 2)
+  precio_nino        Decimal    @db.Decimal(10, 2)
+  precio_tercera_edad Decimal   @db.Decimal(10, 2)
+  cantidad_boletos   Int
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+  boletos            Boleto[]
+}
+
+model Boleto {
+  boletoId           Int        @id @default(autoincrement())
+  rutaId             Int
+  cantidad_adulto    Int
+  cantidad_nino      Int
+  cantidad_tercera_edad Int
+  proceso_compra     ProcesoCompra?
+  totalPrice        Decimal    @db.Decimal(10, 2)
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+
+  ruta               Ruta       @relation(fields: [rutaId], references: [rutaId], onDelete: Cascade, onUpdate: Cascade)
+  compras            Compra[]
+}
+
+enum ProcesoCompra {
+  comprado
+  libre
+  reservado
+}
+
+model Compra {
+  compraId           Int        @id @default(autoincrement())
+  boletoId           Int
+  userId             Int
+  precio             Decimal    @db.Decimal(10, 2)
+  qrCode             String?    @db.LongText
+  qrCodeStatus       QrCodeStatus @default(ACTIVE)
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+
+  boleto             Boleto     @relation(fields: [boletoId], references: [boletoId], onDelete: Cascade, onUpdate: Cascade)
+  usuario            Usuario    @relation(fields: [userId], references: [usuarioId], onDelete: Cascade, onUpdate: Cascade)
+}
+
+enum QrCodeStatus {
+  ACTIVE
+  USED
+  INVALID
+}
